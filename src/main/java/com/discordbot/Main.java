@@ -119,37 +119,6 @@ public class Main {
         }
     }
 
-    public static EmbedBuilder sendColorPalette()  {
-        String link = "http://www.colourlovers.com/api/palettes/random";
-        var client = HttpClient.newHttpClient();
-        var request = HttpRequest.newBuilder(
-                        URI.create(link))
-                .header("accept", "application/json")
-                .build();
-        try {
-            try {
-                var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                String body = response.body();
-                String imageURL = body.substring(body.lastIndexOf("<imageUrl><![CDATA[")+19,body.lastIndexOf("]]></imageUrl>"));
-                String badgeURL = body.substring(body.lastIndexOf("<badgeUrl><![CDATA[")+19,body.lastIndexOf("]]></badgeUrl>"));
-                String rawArrayOfHexes = body.substring(body.indexOf("<hex>"),body.lastIndexOf("</hex>")+6);
-                String [] arrayOfHexes = rawArrayOfHexes.split("</hex>");
-                for (int i = 0; i < arrayOfHexes.length; i++) {
-                    arrayOfHexes[i] = arrayOfHexes[i].substring(arrayOfHexes[i].indexOf("<hex>")+5);
-                }
-                EmbedBuilder embedBuilder = new EmbedBuilder()
-                        .setTitle(body.substring(body.indexOf("<title>")+16,body.indexOf("</title>")-3))
-                        .setImage(imageURL)
-                        .setFooter(Arrays.toString(arrayOfHexes).substring(1,Arrays.toString(arrayOfHexes).length()-1));
-                return embedBuilder;
-            } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        } catch (RuntimeException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public static void startPlayer(AudioConnection audioConnection, DiscordApi api) {
         System.out.println("player started");
         // Create a player manager
