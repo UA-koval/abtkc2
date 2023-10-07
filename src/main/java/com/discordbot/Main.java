@@ -16,6 +16,10 @@ import java.net.*;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.javacord.api.audio.*;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
 import org.javacord.api.entity.message.Messageable;
@@ -43,6 +47,14 @@ public class Main {
         createSlashCommandListeners(api);
         // Print the invite url of your bot
         System.out.println("You can invite the bot by using the following url: " + api.createBotInvite());
+        try {
+            var commands = api.getGlobalSlashCommands().get();
+            for (var command : commands) {
+                System.out.println(command.getName()+" "+command.getId());
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static EmbedBuilder embedWaifuPics(String link) {
@@ -123,7 +135,7 @@ public class Main {
                 String rawArrayOfHexes = body.substring(body.indexOf("<hex>"),body.lastIndexOf("</hex>")+6);
                 String [] arrayOfHexes = rawArrayOfHexes.split("</hex>");
                 for (int i = 0; i < arrayOfHexes.length; i++) {
-                    arrayOfHexes[i] = arrayOfHexes[i].substring(arrayOfHexes[i].indexOf("<hex>")+6);
+                    arrayOfHexes[i] = arrayOfHexes[i].substring(arrayOfHexes[i].indexOf("<hex>")+5);
                 }
                 EmbedBuilder embedBuilder = new EmbedBuilder()
                         .setTitle(body.substring(body.indexOf("<title>")+16,body.indexOf("</title>")-3))
@@ -139,6 +151,7 @@ public class Main {
     }
 
     public static void startPlayer(AudioConnection audioConnection, DiscordApi api) {
+        System.out.println("player started");
         // Create a player manager
 // Create a player manager
         AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
@@ -148,14 +161,17 @@ public class Main {
         AudioSource source = new LavaplayerAudioSource(api, player);
         audioConnection.setAudioSource(source);
 // You can now use the AudioPlayer like you would normally do with Lavaplayer, e.g.,
-        playerManager.loadItem("https://radio.plaza.one/opus", new AudioLoadResultHandler() {
+        System.out.println();
+        playerManager.loadItem("http://radio.plaza.one/mp3", new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
+                System.out.println("trackLoaded");
                 player.playTrack(track);
             }
 
             @Override
             public void playlistLoaded(AudioPlaylist playlist) {
+                System.out.println("playlistLoaded");
                 for (AudioTrack track : playlist.getTracks()) {
                     player.playTrack(track);
                 }
@@ -164,23 +180,20 @@ public class Main {
             @Override
             public void noMatches() {
                 // Notify the user that we've got nothing
+                System.out.println("noMatches");
             }
 
             @Override
             public void loadFailed(FriendlyException throwable) {
                 // Notify the user that everything exploded
+                System.out.println("loadFailed");
+
             }
         }
         );
     }
 
     public static void createCommands(DiscordApi api) {
-        SlashCommand command = SlashCommand.with("waifu", "Send randompic from waifu.in",Arrays.asList(
-                        SlashCommandOption.createBooleanOption("NSFW","NSFW?",false),
-                        SlashCommandOption.createBooleanOption("GIF","GIF?",false)
-                ))
-                .createGlobal(api)
-                .join();
         // Slash command for plaza
         SlashCommand command2 = SlashCommand.with("plaza", "Connect to VC and start playing plaza.one")
                 .createGlobal(api)
@@ -194,14 +207,7 @@ public class Main {
         SlashCommand command4 = SlashCommand.with("playmeltyblood", "You should play melty blood right now!")
                 .createGlobal(api)
                 .join();
-        // Slash command for waifu.pics
-        SlashCommand command1234 = SlashCommand.with("waifupics", "Get random picture from waifu.pics",Arrays.asList(
-                        SlashCommandOption.createBooleanOption("nsfw","NSFW?",false),
-                        SlashCommandOption.createStringOption("tag","Choose tag. Check /help command:waifupics for list of available tags.",false)
-                ))
-                .createGlobal(api)
-                .join();
-        SlashCommand command5678 = SlashCommand.with("randomcolors", "Get Random palette from colourlovers.com")
+        SlashCommand command5679 = SlashCommand.with("stop", "Stop playing radio (WIP)")
                 .createGlobal(api)
                 .join();
     }
@@ -209,58 +215,23 @@ public class Main {
     public static void createSlashCommandListeners(DiscordApi api) {
         api.addSlashCommandCreateListener(event -> {
             SlashCommandInteraction slashCommandInteraction = event.getSlashCommandInteraction();
-            if (Objects.equals(slashCommandInteraction.getCommandName(), "waifu")) {
-                //waifu listener
-                String link = "https://api.waifu.im/random/?full=false";
-                Boolean nsfwget, gifget;
-                if (slashCommandInteraction.getOptionBooleanValueByName("nsfw").isPresent()) {
-                    nsfwget = slashCommandInteraction.getOptionBooleanValueByName("nsfw").get();
-                    link = link + "&is_nsfw=" + nsfwget;
-                }
-                if (slashCommandInteraction.getOptionBooleanValueByName("gif").isPresent()) {
-                    gifget = slashCommandInteraction.getOptionBooleanValueByName("gif").get();
-                    link = link + "&gif=" + gifget;
-                }
-                slashCommandInteraction.createImmediateResponder().addEmbed(embedWaifu(link)).respond();
-            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "plaza")) {
+                if (Objects.equals(slashCommandInteraction.getCommandName(), "plaza")) {
                 //plaza Command listener
-                if (slashCommandInteraction.getServer().isPresent()) {
-                    if (slashCommandInteraction.getServer().get().getConnectedVoiceChannel(slashCommandInteraction.getUser()).isPresent()) {
-                        slashCommandInteraction.getUser().getConnectedVoiceChannel(
-                                slashCommandInteraction.getServer().get()).get().connect().thenAccept(audioConnection -> {
-                            // Do stuff upon connecting to VC
-                            slashCommandInteraction.createImmediateResponder().append("One second...").respond();
-                            startPlayer(audioConnection, api);
-                        }).exceptionally(e -> {
-                            slashCommandInteraction.createImmediateResponder().append("I failed to connect to VC.").respond();
-                            e.printStackTrace();
-                            return null;
-                        });
-                    } else slashCommandInteraction.createImmediateResponder().append("Connect to Voice Channel first.").respond();
-                } else slashCommandInteraction.createImmediateResponder().append("Where is server?").respond();
+                if (slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).isPresent()) {
+                    ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
+                    channel.connect().thenAccept(audioConnection -> {
+                        System.out.println("startPlayerBegin");
+                        startPlayer(audioConnection, api);
+                        System.out.println("startPlayerStop");
+                    }).exceptionally(e -> {
+                        System.out.println("Failed to connect to voice channel (no permissions?)");
+                        e.printStackTrace();
+                        return null;
+                    });
+                } else slashCommandInteraction.createImmediateResponder().setContent("Join VC first.").respond();
+
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "help")) {
                 //help Command listener
-                if (slashCommandInteraction.getOptionStringValueByName("command").isPresent()) {
-                    if (slashCommandInteraction.getOptionStringValueByName("command").get().equals("waifupics")) {
-                        EmbedBuilder embedBuilder = new EmbedBuilder()
-                                .setTitle("/waifupics")
-                                .addField("Description:","Get random image, gif or reaction from waifu.pics.")
-                                .addField("Example","/waifupics nsfw:false tag:waifu")
-                                .addField("Nsfw options:","false, true")
-                                .addField("Nsfw default value:","false")
-                                .addField("Tag options with NSFW = False : ", "waifu, " +
-                                        "neko, shinobu, megumin, bully, cuddle, cry, hug, awoo, kiss, lick, " +
-                                        "pat, smug, bonk, yeet, blush, smile, wave, highfive, handhold, " +
-                                        "nom, bite, glomp, slap, kill, kick, happy, wink, poke, dance")
-                                .addField("Tag options with NSFW = True : ","waifu, neko, trap, blowjob")
-                                .addField("Tag default option: ","waifu");
-                        slashCommandInteraction.createImmediateResponder().addEmbed(embedBuilder).respond();
-                    } else {
-                        EmbedBuilder embedBuilder = new EmbedBuilder()
-                                .setTitle("Command not found, or documentation still doesn't exist.");
-                        slashCommandInteraction.createImmediateResponder().addEmbed(embedBuilder).respond();
-                    }
-                } else {
                     EmbedBuilder embedBuilder = new EmbedBuilder()
                             .setTitle("Slash Commands:")
                             .addField("/help", "This.")
@@ -268,9 +239,10 @@ public class Main {
                             .addField("/plaza", "Connect to VC and start playing plaza.one")
                             .addField("/waifu nsfw:false gif:false", "Random picture from waifu.moe.")
                             .addField("/waifupics nsfw:false tag:text", "Random picture from waifu.pics.")
+                            .addField("/colors", "Random colorpalette from colourlovers.com")
+                            .addField("/playmeltyblood", "What's Melty Blood?")
                             .setFooter("try /help command:waifupics");
                     slashCommandInteraction.createImmediateResponder().addEmbed(embedBuilder).respond();
-                }
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "playmeltyblood")) {
                 //playmeltyblood Command listener
                 EmbedBuilder embedBuilder = new EmbedBuilder()
@@ -288,26 +260,16 @@ public class Main {
                         .setFooter("play.meltyblood.com")
                         .setUrl("https://play.meltyblood.club/");
                 slashCommandInteraction.createImmediateResponder().addEmbed(embedBuilder).respond();
-            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "waifupics")) {
-                //waifu.pics listener
-                String link = "https://api.waifu.pics/";
-                Optional<String> tag = slashCommandInteraction.getOptionStringValueByName("tag");
-                Optional<Boolean> nsfw = slashCommandInteraction.getOptionBooleanValueByName("nsfw");
-                Boolean nsfwget = false;
-                String tagget = "waifu";
-                if (nsfw.isPresent()) nsfwget = nsfw.get();
-                if (tag.isPresent()) tagget = tag.get();
-                if (nsfwget) link = link + "nsfw/"; else link = link + "sfw/";
-                link = link + tagget;
-                slashCommandInteraction.createImmediateResponder().addEmbed(embedWaifuPics(link)).respond();
-            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "randomcolors")) {
-                //randomcolors listener
-                if (slashCommandInteraction.getChannel().isPresent())
-                    slashCommandInteraction.createImmediateResponder()
-                            .addEmbed(sendColorPalette())
-                            .respond();
-                else
-                    slashCommandInteraction.createImmediateResponder().setContent("no text channel wtf");
+            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "stop")) {
+                if (slashCommandInteraction.getServer().isPresent()) {
+                    if (slashCommandInteraction.getServer().get().getConnectedVoiceChannel(api.getYourself()).isPresent()) {
+                        slashCommandInteraction
+                                .getServer().get()
+                                .getConnectedVoiceChannel(api.getYourself()).get()
+                                .disconnect();
+                        slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
+                    } else slashCommandInteraction.createImmediateResponder().setContent("Voice channel not found.").respond();
+                } else slashCommandInteraction.createImmediateResponder().setContent("No group found.").respond();
             }
         });
     }
