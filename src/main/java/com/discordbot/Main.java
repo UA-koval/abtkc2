@@ -1,12 +1,14 @@
 package com.discordbot;
 
 import com.sedmelluq.discord.lavaplayer.player.*;
+import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.source.youtube.*;
 import com.sedmelluq.discord.lavaplayer.source.http.*;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import com.sedmelluq.discord.lavaplayer.track.playback.*;
 import org.javacord.api.*;
 import java.awt.*;
@@ -57,69 +59,7 @@ public class Main {
         }
     }
 
-    public static EmbedBuilder embedWaifuPics(String link) {
-        var client = HttpClient.newHttpClient();
-        EmbedBuilder embedBuilder = new EmbedBuilder()
-                .setTitle("No answer.");
-        var request = HttpRequest.newBuilder(
-                        URI.create(link))
-                .header("accept", "application/json")
-                .build();
-        HttpResponse<String> response = null;
-        try {
-            response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        } catch (IOException | InterruptedException e) {
-            return embedBuilder;
-        }
-        JSONObject jsonObject = new JSONObject(response.body());
-        if (jsonObject.has("message")) {
-            embedBuilder = new EmbedBuilder()
-                    .setTitle((String) jsonObject.get("message"));
-//                    .addField("Request:",link);
-            return embedBuilder;
-        } else if (jsonObject.has("url")) {
-            embedBuilder = new EmbedBuilder()
-                    .setImage((String) jsonObject.get("url"));
-            return embedBuilder;
-        } else return embedBuilder;
-    }
-
-    public static EmbedBuilder embedWaifu(String link) {
-        var client = HttpClient.newHttpClient();
-        EmbedBuilder embedBuilder = new EmbedBuilder()
-                .addField("Whoops, nothing there","Something went wrong.");
-        var request = HttpRequest.newBuilder(
-                        URI.create(link))
-                .header("accept", "application/json")
-                .build();
-
-        try {
-            try {
-                var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                JSONObject jsonObject = new JSONObject(response.body());
-                var images = (JSONArray) jsonObject.get("images");
-                var image = (JSONObject) images.get(0);
-                var url = (String) image.get("url");
-                var source = "https://example.com";
-                if (image.has("source")) {
-                    if (image.get("source") instanceof String) {
-                        source = (String) image.get("source");
-                    }
-                }
-                embedBuilder = new EmbedBuilder()
-                        .setTitle("#" + (Integer) image.get("image_id"))
-                        .setImage(url);
-                if (!source.equals("https://example.com")) embedBuilder.setAuthor("Source", source, "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/240/microsoft/310/red-heart_2764-fe0f.png");
-                return embedBuilder;
-            } catch (IOException | InterruptedException e) {
-                return embedBuilder;
-            }
-        } catch (ClassCastException e) {
-            return embedBuilder;
-        }
-    }
-
-    public static void startPlayer(AudioConnection audioConnection, DiscordApi api) {
+    public static void startPlaza(AudioConnection audioConnection, DiscordApi api) {
         System.out.println("player started");
         // Create a player manager
 // Create a player manager
@@ -129,9 +69,9 @@ public class Main {
 // Create an audio source and add it to the audio connection's queue
         AudioSource source = new LavaplayerAudioSource(api, player);
         audioConnection.setAudioSource(source);
-// You can now use the AudioPlayer like you would normally do with Lavaplayer, e.g.,
-        System.out.println();
-        playerManager.loadItem("http://radio.plaza.one/mp3", new AudioLoadResultHandler() {
+// You can now use the AudioPlayer like you would normally do with Lavaplayer, e.g.,//https://www.youtube.com/watch?v=mXHKjFKBC0g
+        System.out.println("test");//
+        playerManager.loadItem("http://radio.plaza.one/ogg", new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
                 System.out.println("trackLoaded");
@@ -162,6 +102,51 @@ public class Main {
         );
     }
 
+    public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link) {
+        AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
+        AudioSourceManagers.registerRemoteSources(playerManager);
+        AudioPlayer player = playerManager.createPlayer();
+// Create a player manager
+//        AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
+//        playerManager.registerSourceManager(new YoutubeAudioSourceManager());
+//        AudioPlayer player = playerManager.createPlayer();
+// Create an audio source and add it to the audio connection's queue
+        AudioSource source = new LavaplayerAudioSource(api, player);
+        audioConnection.setAudioSource(source);
+// You can now use the AudioPlayer like you would normally do with Lavaplayer, e.g.,//https://www.youtube.com/watch?v=mXHKjFKBC0g
+        TrackScheduler trackScheduler = new TrackScheduler();
+        player.addListener(trackScheduler);
+        playerManager.loadItem(link, new AudioLoadResultHandler() {
+                    @Override
+                    public void trackLoaded(AudioTrack track) {
+                        System.out.println("trackLoaded");
+                        player.playTrack(track);
+                    }
+
+                    @Override
+                    public void playlistLoaded(AudioPlaylist playlist) {
+                        System.out.println("playlistLoaded");
+                        for (AudioTrack track : playlist.getTracks()) {
+                            player.playTrack(track);
+                        }
+                    }
+
+                    @Override
+                    public void noMatches() {
+                        // Notify the user that we've got nothing
+                        System.out.println("noMatches");
+                    }
+
+                    @Override
+                    public void loadFailed(FriendlyException throwable) {
+                        // Notify the user that everything exploded
+                        System.out.println("loadFailed");
+
+                    }
+                }
+        );
+    }
+
     public static void createCommands(DiscordApi api) {
         // Slash command for plaza
         SlashCommand command2 = SlashCommand.with("plaza", "Connect to VC and start playing plaza.one")
@@ -179,41 +164,42 @@ public class Main {
         SlashCommand command5679 = SlashCommand.with("stop", "Stop playing radio (WIP)")
                 .createGlobal(api)
                 .join();
+        SlashCommand command6 = SlashCommand.with("youtube", "Try playing youtube",Arrays.asList(
+                    SlashCommandOption.createStringOption("Link","https://www.youtube.com/watch?v=mXHKjFKBC0g",true)
+                ))
+//                .addOption(SlashCommandOption.createStringOption("Youtube Link","https://www.youtube.com/watch?v=mXHKjFKBC0g",false)
+                .createGlobal(api)
+                .join();
     }
 
     public static void createSlashCommandListeners(DiscordApi api) {
         api.addSlashCommandCreateListener(event -> {
             SlashCommandInteraction slashCommandInteraction = event.getSlashCommandInteraction();
-                if (Objects.equals(slashCommandInteraction.getCommandName(), "plaza")) {
-                //plaza Command listener
-                if (slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).isPresent()) {
-                    ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
-                    channel.connect().thenAccept(audioConnection -> {
-                        System.out.println("startPlayerBegin");
-                        startPlayer(audioConnection, api);
-                        System.out.println("startPlayerStop");
-                    }).exceptionally(e -> {
-                        System.out.println("Failed to connect to voice channel (no permissions?)");
-                        e.printStackTrace();
-                        return null;
-                    });
-                } else slashCommandInteraction.createImmediateResponder().setContent("Join VC first.").respond();
 
+            //plaza
+                if (Objects.equals(slashCommandInteraction.getCommandName(), "plaza")) {
+                    ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
+                    try {
+                        AudioConnection audioConnection = channel.connect().get(10,TimeUnit.SECONDS);
+                        System.out.println("start");
+                        startPlaza(audioConnection,api);
+                        slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    //help
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "help")) {
-                //help Command listener
                     EmbedBuilder embedBuilder = new EmbedBuilder()
                             .setTitle("Slash Commands:")
                             .addField("/help", "This.")
                             .addField("/help command:text", "Check help for specific command")
                             .addField("/plaza", "Connect to VC and start playing plaza.one")
-                            .addField("/waifu nsfw:false gif:false", "Random picture from waifu.moe.")
-                            .addField("/waifupics nsfw:false tag:text", "Random picture from waifu.pics.")
-                            .addField("/colors", "Random colorpalette from colourlovers.com")
-                            .addField("/playmeltyblood", "What's Melty Blood?")
-                            .setFooter("try /help command:waifupics");
+                            .addField("/playmeltyblood", "What's Melty Blood?");
                     slashCommandInteraction.createImmediateResponder().addEmbed(embedBuilder).respond();
+
+                    //playmeltyblood
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "playmeltyblood")) {
-                //playmeltyblood Command listener
                 EmbedBuilder embedBuilder = new EmbedBuilder()
                         .setTitle("You should play Melty Blood Actress Again Current Code right now.")
                         .setColor(Color.red)
@@ -229,6 +215,8 @@ public class Main {
                         .setFooter("play.meltyblood.com")
                         .setUrl("https://play.meltyblood.club/");
                 slashCommandInteraction.createImmediateResponder().addEmbed(embedBuilder).respond();
+
+                //stop
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "stop")) {
                 if (slashCommandInteraction.getServer().isPresent()) {
                     if (slashCommandInteraction.getServer().get().getConnectedVoiceChannel(api.getYourself()).isPresent()) {
@@ -239,7 +227,19 @@ public class Main {
                         slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
                     } else slashCommandInteraction.createImmediateResponder().setContent("Voice channel not found.").respond();
                 } else slashCommandInteraction.createImmediateResponder().setContent("No group found.").respond();
-            }
+
+                //youtube
+            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "youtube")) {
+                    ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
+                    try {
+                        slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
+                        AudioConnection audioConnection = channel.connect().get(10, TimeUnit.SECONDS);
+                        System.out.println(slashCommandInteraction.getArgumentStringValueByIndex(0).get());
+                        startYoutube(audioConnection, api, slashCommandInteraction.getArgumentStringValueByIndex(0).get());
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
         });
     }
  }
@@ -284,3 +284,46 @@ public class Main {
         return new LavaplayerAudioSource(getApi(), audioPlayer);
     }
 }
+
+class TrackScheduler extends AudioEventAdapter {
+    @Override
+    public void onPlayerPause(AudioPlayer player) {
+        // Player was paused
+    }
+
+    @Override
+    public void onPlayerResume(AudioPlayer player) {
+        // Player was resumed
+    }
+
+    @Override
+    public void onTrackStart(AudioPlayer player, AudioTrack track) {
+        // A track started playing
+    }
+
+    @Override
+    public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
+        if (endReason.mayStartNext) {
+            player.playTrack(track.makeClone());
+            // Start next track
+        }
+
+        // endReason == FINISHED: A track finished or died by an exception (mayStartNext = true).
+        // endReason == LOAD_FAILED: Loading of a track failed (mayStartNext = true).
+        // endReason == STOPPED: The player was stopped.
+        // endReason == REPLACED: Another track started playing while this had not finished
+        // endReason == CLEANUP: Player hasn't been queried for a while, if you want you can put a
+        //                       clone of this back to your queue
+    }
+
+    @Override
+    public void onTrackException(AudioPlayer player, AudioTrack track, FriendlyException exception) {
+        // An already playing track threw an exception (track end event will still be received separately)
+    }
+
+    @Override
+    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
+        // Audio track has been unable to provide us any audio, might want to just start a new track
+    }
+}
+
