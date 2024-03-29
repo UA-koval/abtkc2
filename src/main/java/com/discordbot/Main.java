@@ -102,6 +102,49 @@ public class Main {
         );
     }
 
+    public static void startGensokyoRadio(AudioConnection audioConnection, DiscordApi api) {
+        System.out.println("player started");
+        // Create a player manager
+// Create a player manager
+        AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
+        playerManager.registerSourceManager(new HttpAudioSourceManager());
+        AudioPlayer player = playerManager.createPlayer();
+// Create an audio source and add it to the audio connection's queue
+        AudioSource source = new LavaplayerAudioSource(api, player);
+        audioConnection.setAudioSource(source);
+// You can now use the AudioPlayer like you would normally do with Lavaplayer, e.g.,//https://www.youtube.com/watch?v=mXHKjFKBC0g
+        System.out.println("test");//
+        playerManager.loadItem("https://stream.gensokyoradio.net/1", new AudioLoadResultHandler() {
+                    @Override
+                    public void trackLoaded(AudioTrack track) {
+                        System.out.println("trackLoaded");
+                        player.playTrack(track);
+                    }
+
+                    @Override
+                    public void playlistLoaded(AudioPlaylist playlist) {
+                        System.out.println("playlistLoaded");
+                        for (AudioTrack track : playlist.getTracks()) {
+                            player.playTrack(track);
+                        }
+                    }
+
+                    @Override
+                    public void noMatches() {
+                        // Notify the user that we've got nothing
+                        System.out.println("noMatches");
+                    }
+
+                    @Override
+                    public void loadFailed(FriendlyException throwable) {
+                        // Notify the user that everything exploded
+                        System.out.println("loadFailed");
+
+                    }
+                }
+        );
+    }
+
     public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link) {
         AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
         AudioSourceManagers.registerRemoteSources(playerManager);
@@ -152,6 +195,10 @@ public class Main {
         SlashCommand command2 = SlashCommand.with("plaza", "Connect to VC and start playing plaza.one")
                 .createGlobal(api)
                 .join();
+        // Slash command for gensokyoRadio
+        SlashCommand command22 = SlashCommand.with("gensokyoradio", "Connect to VC and start playing gensokyoradio")
+                .createGlobal(api)
+                .join();
         // Slash command for help
         SlashCommand command3 = SlashCommand.with("help", "Display help.",Arrays.asList(
                 SlashCommandOption.createStringOption("command","Get Help for specific slash command",false)))
@@ -187,7 +234,17 @@ public class Main {
                     } catch (InterruptedException | ExecutionException | TimeoutException e) {
                         throw new RuntimeException(e);
                     }
-
+                    //gensokyoradio
+            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "gensokyoradio")) {
+                    ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
+                    try {
+                        AudioConnection audioConnection = channel.connect().get(10,TimeUnit.SECONDS);
+                        System.out.println("start");
+                        startGensokyoRadio(audioConnection,api);
+                        slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                        throw new RuntimeException(e);
+                    }
                     //help
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "help")) {
                     EmbedBuilder embedBuilder = new EmbedBuilder()
