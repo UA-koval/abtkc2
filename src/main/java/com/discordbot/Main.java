@@ -3,7 +3,6 @@ package com.discordbot;
 import com.sedmelluq.discord.lavaplayer.player.*;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
-import com.sedmelluq.discord.lavaplayer.source.youtube.*;
 import com.sedmelluq.discord.lavaplayer.source.http.*;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
@@ -13,21 +12,17 @@ import com.sedmelluq.discord.lavaplayer.track.playback.*;
 import org.javacord.api.*;
 import java.awt.*;
 import java.io.*;
-import java.net.http.*;
-import java.net.*;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.javacord.api.audio.*;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
-import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.interaction.*;
-import org.json.*;
+
 
 public class Main {
     public static void main(String[] args) {
@@ -145,7 +140,7 @@ public class Main {
         );
     }
 
-    public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link) {
+    public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link, SlashCommandInteraction slashCommandInteraction) {
         AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
         AudioSourceManagers.registerRemoteSources(playerManager);
         AudioPlayer player = playerManager.createPlayer();
@@ -164,6 +159,7 @@ public class Main {
                     public void trackLoaded(AudioTrack track) {
                         System.out.println("trackLoaded");
                         player.playTrack(track);
+                        slashCommandInteraction.createImmediateResponder().setContent("Track Loaded.").respond();
                     }
 
                     @Override
@@ -171,6 +167,7 @@ public class Main {
                         System.out.println("playlistLoaded");
                         for (AudioTrack track : playlist.getTracks()) {
                             player.playTrack(track);
+                            slashCommandInteraction.createImmediateResponder().setContent("Playlist Loaded.").respond();
                         }
                     }
 
@@ -178,13 +175,15 @@ public class Main {
                     public void noMatches() {
                         // Notify the user that we've got nothing
                         System.out.println("noMatches");
+                        slashCommandInteraction.createImmediateResponder().setContent("No Matches.").respond();
                     }
 
                     @Override
                     public void loadFailed(FriendlyException throwable) {
                         // Notify the user that everything exploded
                         System.out.println("loadFailed");
-
+                        slashCommandInteraction.createImmediateResponder().setContent("Load Failed.").respond();
+                        throw throwable;
                     }
                 }
         );
@@ -289,10 +288,11 @@ public class Main {
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "youtube")) {
                     ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
                     try {
-                        slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
+                        //slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
                         AudioConnection audioConnection = channel.connect().get(10, TimeUnit.SECONDS);
                         System.out.println(slashCommandInteraction.getArgumentStringValueByIndex(0).get());
-                        startYoutube(audioConnection, api, slashCommandInteraction.getArgumentStringValueByIndex(0).get());
+                        startYoutube(audioConnection, api, slashCommandInteraction.getArgumentStringValueByIndex(0).get(), slashCommandInteraction);
+
                     } catch (InterruptedException | ExecutionException | TimeoutException e) {
                         throw new RuntimeException(e);
                     }
