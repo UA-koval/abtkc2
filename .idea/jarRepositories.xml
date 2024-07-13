@@ -26,5 +26,15 @@
       <option name="name" value="maven" />
       <option name="url" value="https://jitpack.io" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="arbjergDevSnapshots" />
+      <option name="name" value="arbjergDevSnapshots" />
+      <option name="url" value="https://maven.lavalink.dev/snapshots" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="arbjergDevReleases" />
+      <option name="name" value="arbjergDevReleases" />
+      <option name="url" value="https://maven.lavalink.dev/releases" />
+    </remote-repository>
   </component>
 </project>
