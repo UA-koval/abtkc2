@@ -9,10 +9,12 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import com.sedmelluq.discord.lavaplayer.track.playback.*;
+import dev.lavalink.youtube.YoutubeAudioSourceManager;
 import org.javacord.api.*;
 import java.awt.*;
 import java.io.*;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -140,53 +142,112 @@ public class Main {
         );
     }
 
-    public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link, SlashCommandInteraction slashCommandInteraction) {
+    public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link, SlashCommandInteraction slashCommandInteraction, boolean random) {
         AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
-        AudioSourceManagers.registerRemoteSources(playerManager);
+        YoutubeAudioSourceManager ytSourceManager = new dev.lavalink.youtube.YoutubeAudioSourceManager();
+        playerManager.registerSourceManager(ytSourceManager);
+        AudioSourceManagers.registerRemoteSources(playerManager,
+                com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager.class);
+
+        //AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
+        //AudioSourceManagers.registerRemoteSources(playerManager);
         AudioPlayer player = playerManager.createPlayer();
-// Create a player manager
-//        AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
-//        playerManager.registerSourceManager(new YoutubeAudioSourceManager());
-//        AudioPlayer player = playerManager.createPlayer();
-// Create an audio source and add it to the audio connection's queue
         AudioSource source = new LavaplayerAudioSource(api, player);
         audioConnection.setAudioSource(source);
 // You can now use the AudioPlayer like you would normally do with Lavaplayer, e.g.,//https://www.youtube.com/watch?v=mXHKjFKBC0g
-        TrackScheduler trackScheduler = new TrackScheduler();
+        TrackScheduler trackScheduler = new TrackScheduler(player);
         player.addListener(trackScheduler);
-        playerManager.loadItem(link, new AudioLoadResultHandler() {
-                    @Override
-                    public void trackLoaded(AudioTrack track) {
-                        System.out.println("trackLoaded");
-                        player.playTrack(track);
-                        slashCommandInteraction.createImmediateResponder().setContent("Track Loaded.").respond();
-                    }
+        if (!random) {
+            playerManager.loadItem(link, new AudioLoadResultHandler() {
+                        @Override
+                        public void trackLoaded(AudioTrack track) {
+                            System.out.println("trackLoaded");
+                            trackScheduler.writeList(List.of(track));
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("Loading track: " + link)
+                                    .send();
+//                        trackScheduler.queue(track);
+                            //player.playTrack(track);
 
-                    @Override
-                    public void playlistLoaded(AudioPlaylist playlist) {
-                        System.out.println("playlistLoaded");
-                        for (AudioTrack track : playlist.getTracks()) {
-                            player.playTrack(track);
-                            slashCommandInteraction.createImmediateResponder().setContent("Playlist Loaded.").respond();
+                        }
+
+                        @Override
+                        public void playlistLoaded(AudioPlaylist playlist) {
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("You are loading entire playlist. If you wish to load a single song, use URI without playlist.\nLoading playlist: " + link)
+                                    .send();
+//                        for (AudioTrack track : playlist.getTracks()) {
+//                            trackScheduler.queue(track);
+//                        }
+                            trackScheduler.writeList(playlist.getTracks());
+                        }
+
+                        @Override
+                        public void noMatches() {
+                            // Notify the user that we've got nothing
+                            System.out.println("noMatches");
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("Can't find track. " + link)
+                                    .send();
+                        }
+
+                        @Override
+                        public void loadFailed(FriendlyException throwable) {
+                            // Notify the user that everything exploded
+                            System.out.println("loadFailed");
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("Load failed. " + link)
+                                    .send();
+                            throw throwable;
                         }
                     }
+            );
+        } else {
+            playerManager.loadItem(link, new AudioLoadResultHandler() {
+                        @Override
+                        public void trackLoaded(AudioTrack track) {
+                            System.out.println("trackLoaded");
+                            trackScheduler.writeList(List.of(track));
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("Loading track: " + link)
+                                    .send();
+//                        trackScheduler.queue(track);
+                            //player.playTrack(track);
 
-                    @Override
-                    public void noMatches() {
-                        // Notify the user that we've got nothing
-                        System.out.println("noMatches");
-                        slashCommandInteraction.createImmediateResponder().setContent("No Matches.").respond();
-                    }
+                        }
 
-                    @Override
-                    public void loadFailed(FriendlyException throwable) {
-                        // Notify the user that everything exploded
-                        System.out.println("loadFailed");
-                        slashCommandInteraction.createImmediateResponder().setContent("Load Failed.").respond();
-                        throw throwable;
+                        @Override
+                        public void playlistLoaded(AudioPlaylist playlist) {
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("You are loading entire playlist. If you wish to load a single song, use URI without playlist.\nLoading playlist: " + link)
+                                    .send();
+//                        for (AudioTrack track : playlist.getTracks()) {
+//                            trackScheduler.queue(track);
+//                        }
+                            trackScheduler.randomList(playlist.getTracks());
+                        }
+
+                        @Override
+                        public void noMatches() {
+                            // Notify the user that we've got nothing
+                            System.out.println("noMatches");
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("Can't find track. " + link)
+                                    .send();
+                        }
+
+                        @Override
+                        public void loadFailed(FriendlyException throwable) {
+                            // Notify the user that everything exploded
+                            System.out.println("loadFailed");
+                            slashCommandInteraction.createFollowupMessageBuilder()
+                                    .setContent("Load failed. " + link)
+                                    .send();
+                            throw throwable;
+                        }
                     }
-                }
-        );
+            );
+        }
     }
 
     public static void createCommands(DiscordApi api) {
@@ -210,8 +271,10 @@ public class Main {
         SlashCommand command5679 = SlashCommand.with("stop", "Stop playing radio (WIP)")
                 .createGlobal(api)
                 .join();
-        SlashCommand command6 = SlashCommand.with("youtube", "Try playing youtube",Arrays.asList(
-                    SlashCommandOption.createStringOption("Link","https://www.youtube.com/watch?v=mXHKjFKBC0g",true)
+        SlashCommand command6 = SlashCommand.with("play", "Try playing youtube",Arrays.asList(
+                    SlashCommandOption.createStringOption("Link","https://www.youtube.com/watch?v=mXHKjFKBC0g",true),
+                    SlashCommandOption.createBooleanOption("Random","Shuffle the playlist?",false)
+                    //SlashCommandOption.createBooleanOption("Random?","Shuffle playlist?",false)
                 ))
 //                .addOption(SlashCommandOption.createStringOption("Youtube Link","https://www.youtube.com/watch?v=mXHKjFKBC0g",false)
                 .createGlobal(api)
@@ -285,13 +348,16 @@ public class Main {
                 } else slashCommandInteraction.createImmediateResponder().setContent("No group found.").respond();
 
                 //youtube
-            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "youtube")) {
+            } else if (Objects.equals(slashCommandInteraction.getCommandName(), "play")) {
                     ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
                     try {
-                        //slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
+                        slashCommandInteraction.respondLater().thenAccept(interactionOriginalResponseUpdater -> {
+                            interactionOriginalResponseUpdater.setContent("Loading track...").update();
+                        });
                         AudioConnection audioConnection = channel.connect().get(10, TimeUnit.SECONDS);
-                        System.out.println(slashCommandInteraction.getArgumentStringValueByIndex(0).get());
-                        startYoutube(audioConnection, api, slashCommandInteraction.getArgumentStringValueByIndex(0).get(), slashCommandInteraction);
+                        startYoutube(audioConnection, api,
+                                slashCommandInteraction.getArgumentStringValueByIndex(0).get(), slashCommandInteraction,
+                                slashCommandInteraction.getArgumentBooleanValueByIndex(1).orElse(false));
 
                     } catch (InterruptedException | ExecutionException | TimeoutException e) {
                         throw new RuntimeException(e);
@@ -341,46 +407,3 @@ public class Main {
         return new LavaplayerAudioSource(getApi(), audioPlayer);
     }
 }
-
-class TrackScheduler extends AudioEventAdapter {
-    @Override
-    public void onPlayerPause(AudioPlayer player) {
-        // Player was paused
-    }
-
-    @Override
-    public void onPlayerResume(AudioPlayer player) {
-        // Player was resumed
-    }
-
-    @Override
-    public void onTrackStart(AudioPlayer player, AudioTrack track) {
-        // A track started playing
-    }
-
-    @Override
-    public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
-        if (endReason.mayStartNext) {
-            player.playTrack(track.makeClone());
-            // Start next track
-        }
-
-        // endReason == FINISHED: A track finished or died by an exception (mayStartNext = true).
-        // endReason == LOAD_FAILED: Loading of a track failed (mayStartNext = true).
-        // endReason == STOPPED: The player was stopped.
-        // endReason == REPLACED: Another track started playing while this had not finished
-        // endReason == CLEANUP: Player hasn't been queried for a while, if you want you can put a
-        //                       clone of this back to your queue
-    }
-
-    @Override
-    public void onTrackException(AudioPlayer player, AudioTrack track, FriendlyException exception) {
-        // An already playing track threw an exception (track end event will still be received separately)
-    }
-
-    @Override
-    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
-        // Audio track has been unable to provide us any audio, might want to just start a new track
-    }
-}
-

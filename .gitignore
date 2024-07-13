@@ -1,2 +1,4 @@
 /token.txt
 /build/distributions/
+/build/*
+/.gradle/

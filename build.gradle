@@ -24,6 +24,10 @@ repositories {
         name "arbjergDevSnapshots"
         url "https://maven.lavalink.dev/snapshots"
     }
+    maven {
+        name "arbjergDevReleases"
+        url "https://maven.lavalink.dev/releases"
+    }
 }
 
 dependencies {
@@ -31,10 +35,12 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
     implementation 'org.javacord:javacord:3.8.0'
     implementation 'org.json:json:20220320'
+    implementation 'dev.lavalink.youtube:v2:1.4.0'
     //implementation 'com.sedmelluq:lavaplayer:1.3.77'
-    //implementation 'dev.arbjerg:lavaplayer:2.1.1'
-    implementation "dev.arbjerg:lavaplayer:0eaeee195f0315b2617587aa3537fa202df07ddc-SNAPSHOT"
-
+    implementation 'dev.arbjerg:lavaplayer:2.2.1'
+    //implementation "dev.arbjerg:lavaplayer:0eaeee195f0315b2617587aa3537fa202df07ddc-SNAPSHOT"
+    //implementation "dev.arbjerg:lavaplayer:00d5258dea97b2ca623eaa8e7c251543c4f17b71-SNAPSHOT"
+    //implementation "dev.arbjerg:lavalink-client:3.0.0"
 }
 
 test {
