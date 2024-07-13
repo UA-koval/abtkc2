@@ -343,17 +343,21 @@ public class Main {
                                 .getServer().get()
                                 .getConnectedVoiceChannel(api.getYourself()).get()
                                 .disconnect();
-                        slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
-                    } else slashCommandInteraction.createImmediateResponder().setContent("Voice channel not found.").respond();
-                } else slashCommandInteraction.createImmediateResponder().setContent("No group found.").respond();
-
+                        slashCommandInteraction.createImmediateResponder().setContent("Bye.").respond();
+                    } else slashCommandInteraction.createFollowupMessageBuilder()
+                            .setContent("Voicechat not found")
+                            .send();
+                } else slashCommandInteraction.createFollowupMessageBuilder()
+                        .setContent("Group not found")
+                        .send();
                 //youtube
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "play")) {
-                    ServerVoiceChannel channel = slashCommandInteraction.getUser().getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
+                    slashCommandInteraction.respondLater().thenAccept(interactionOriginalResponseUpdater -> {
+                        interactionOriginalResponseUpdater.setContent("Loading...").update();
+                    });
+                    ServerVoiceChannel channel = slashCommandInteraction.getUser()
+                            .getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
                     try {
-                        slashCommandInteraction.respondLater().thenAccept(interactionOriginalResponseUpdater -> {
-                            interactionOriginalResponseUpdater.setContent("Loading track...").update();
-                        });
                         AudioConnection audioConnection = channel.connect().get(10, TimeUnit.SECONDS);
                         startYoutube(audioConnection, api,
                                 slashCommandInteraction.getArgumentStringValueByIndex(0).get(), slashCommandInteraction,
