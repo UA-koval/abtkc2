@@ -352,19 +352,27 @@ public class Main {
                         .send();
                 //youtube
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "play")) {
-                    slashCommandInteraction.respondLater().thenAccept(interactionOriginalResponseUpdater -> {
-                        interactionOriginalResponseUpdater.setContent("Loading...").update();
-                    });
-                    ServerVoiceChannel channel = slashCommandInteraction.getUser()
-                            .getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
-                    try {
-                        AudioConnection audioConnection = channel.connect().get(10, TimeUnit.SECONDS);
-                        startYoutube(audioConnection, api,
-                                slashCommandInteraction.getArgumentStringValueByIndex(0).get(), slashCommandInteraction,
-                                slashCommandInteraction.getArgumentBooleanValueByIndex(1).orElse(false));
+//                    slashCommandInteraction.respondLater().thenAccept(interactionOriginalResponseUpdater -> {
+//                        interactionOriginalResponseUpdater.setContent("Loading...").update();
+//                    });
+                    slashCommandInteraction.respondLater();
+                    if (slashCommandInteraction.getUser()
+                            .getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).isPresent()) {
+                        ServerVoiceChannel channel = slashCommandInteraction.getUser()
+                                .getConnectedVoiceChannel(slashCommandInteraction.getServer().get()).get();
+                        try {
+                            AudioConnection audioConnection = channel.connect().get(10, TimeUnit.SECONDS);
+                            startYoutube(audioConnection, api,
+                                    slashCommandInteraction.getArgumentStringValueByIndex(0).get(), slashCommandInteraction,
+                                    slashCommandInteraction.getArgumentBooleanValueByIndex(1).orElse(false));
 
-                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                        throw new RuntimeException(e);
+                        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        slashCommandInteraction.createFollowupMessageBuilder()
+                                .setContent("Voicechat not found. Are you in a voicechat?")
+                                .send();
                     }
                 }
         });
