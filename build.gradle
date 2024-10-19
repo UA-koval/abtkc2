@@ -44,7 +44,6 @@ dependencies {
     implementation 'dev.arbjerg:lavaplayer:2.2.2'
     //implementation "dev.arbjerg:lavaplayer:0eaeee195f0315b2617587aa3537fa202df07ddc-SNAPSHOT"
     //implementation "dev.arbjerg:lavaplayer:00d5258dea97b2ca623eaa8e7c251543c4f17b71-SNAPSHOT"
-    //implementation "dev.arbjerg:lavalink-client:3.0.0"
 }
 
 test {
