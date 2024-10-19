@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 
 import org.javacord.api.audio.*;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
+import org.javacord.api.entity.intent.Intent;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.interaction.*;
 
@@ -260,6 +261,7 @@ public class Main {
     }
 
     public static void createCommands(DiscordApi api) {
+
         // Slash command for plaza
         SlashCommand command2 = SlashCommand.with("plaza", "Connect to VC and start playing plaza.one")
                 .createGlobal(api)
