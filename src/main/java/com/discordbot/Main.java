@@ -10,6 +10,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import com.sedmelluq.discord.lavaplayer.track.playback.*;
 import dev.lavalink.youtube.YoutubeAudioSourceManager;
+import dev.lavalink.youtube.http.YoutubeOauth2Handler;
 import org.javacord.api.*;
 import java.awt.*;
 import java.io.*;
@@ -19,6 +20,8 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.javacord.api.audio.*;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
@@ -28,10 +31,12 @@ import org.javacord.api.interaction.*;
 
 public class Main {
     public static void main(String[] args) {
-        String token;
+        // reading token
+        String token, token2;
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(new FileInputStream("token.txt")))) {
             token = br.readLine();
+            token2 = br.readLine();
             System.out.println("I found file.");
         } catch (FileNotFoundException e) {
             System.out.println("File not found. Expected \"token.txt\"");
@@ -41,9 +46,9 @@ public class Main {
             throw new RuntimeException(e);
         }
         DiscordApi api = new DiscordApiBuilder().setToken(token).login().join();
-
+        System.out.println(token + "\n" + token2);
         createCommands(api);
-        createSlashCommandListeners(api);
+        createSlashCommandListeners(api, token2);
         // Print the invite url of your bot
         System.out.println("You can invite the bot by using the following url: " + api.createBotInvite());
         try {
@@ -142,9 +147,13 @@ public class Main {
         );
     }
 
-    public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link, SlashCommandInteraction slashCommandInteraction, boolean random) {
+    public static void startYoutube(AudioConnection audioConnection, DiscordApi api, String link, SlashCommandInteraction slashCommandInteraction, boolean random, String token2) throws InterruptedException {
         AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
         YoutubeAudioSourceManager ytSourceManager = new dev.lavalink.youtube.YoutubeAudioSourceManager();
+        Logger logger = Logger.getLogger(ytSourceManager.getClass().getName());
+        logger.setLevel(Level.INFO);
+        logger.log(Level.INFO, "TEST");
+        ytSourceManager.useOauth2(token2,true);
         playerManager.registerSourceManager(ytSourceManager);
         AudioSourceManagers.registerRemoteSources(playerManager,
                 com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager.class);
@@ -281,7 +290,7 @@ public class Main {
                 .join();
     }
 
-    public static void createSlashCommandListeners(DiscordApi api) {
+    public static void createSlashCommandListeners(DiscordApi api, String token2) {
         api.addSlashCommandCreateListener(event -> {
             SlashCommandInteraction slashCommandInteraction = event.getSlashCommandInteraction();
 
@@ -364,7 +373,7 @@ public class Main {
                             AudioConnection audioConnection = channel.connect().get(10, TimeUnit.SECONDS);
                             startYoutube(audioConnection, api,
                                     slashCommandInteraction.getArgumentStringValueByIndex(0).get(), slashCommandInteraction,
-                                    slashCommandInteraction.getArgumentBooleanValueByIndex(1).orElse(false));
+                                    slashCommandInteraction.getArgumentBooleanValueByIndex(1).orElse(false),token2);
 
                         } catch (InterruptedException | ExecutionException | TimeoutException e) {
                             throw new RuntimeException(e);
