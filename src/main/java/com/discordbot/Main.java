@@ -14,6 +14,7 @@ import dev.lavalink.youtube.http.YoutubeOauth2Handler;
 import org.javacord.api.*;
 import java.awt.*;
 import java.io.*;
+import java.sql.Time;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -155,6 +156,8 @@ public class Main {
         logger.setLevel(Level.INFO);
         logger.log(Level.INFO, "TEST");
         ytSourceManager.useOauth2(token2,true);
+        //ytSourceManager.useOauth2(null,false);
+        //TimeUnit.SECONDS.sleep(600);
         playerManager.registerSourceManager(ytSourceManager);
         AudioSourceManagers.registerRemoteSources(playerManager,
                 com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager.class);
