@@ -65,7 +65,7 @@ public class Main {
         }
     }
 
-    public static void startPlaza(AudioConnection audioConnection, DiscordApi api) {
+    public static void startPlaza(AudioConnection audioConnection, DiscordApi api, SlashCommandInteraction slashCommandInteraction) {
         System.out.println("player started");
         // Create a player manager
 // Create a player manager
@@ -106,7 +106,7 @@ public class Main {
             }
         }
         );
-        api.getYourself().updateNickname(audioConnection.getServer(),"Nightwave Plaza");
+        api.getYourself().updateNickname(slashCommandInteraction.getServer().get(), "Nightwave Plaza");
     }
 
     public static void startGensokyoRadio(AudioConnection audioConnection, DiscordApi api) {
@@ -336,7 +336,7 @@ public class Main {
                     try {
                         AudioConnection audioConnection = channel.connect().get(10,TimeUnit.SECONDS);
                         System.out.println("start");
-                        startPlaza(audioConnection,api);
+                        startPlaza(audioConnection,api,slashCommandInteraction);
                         slashCommandInteraction.createImmediateResponder().setContent("Loading Nightwave Plaza.").respond();
                     } catch (InterruptedException | ExecutionException | TimeoutException e) {
                         throw new RuntimeException(e);
