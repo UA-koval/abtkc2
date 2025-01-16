@@ -80,7 +80,7 @@ public class Main {
         playerManager.loadItem("http://radio.plaza.one/ogg", new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
-                System.out.println("trackLoaded");
+                System.out.println("plaza loaded");
                 player.playTrack(track);
             }
 
@@ -106,6 +106,7 @@ public class Main {
             }
         }
         );
+        api.getYourself().updateNickname(audioConnection.getServer(),"Nightwave Plaza");
     }
 
     public static void startGensokyoRadio(AudioConnection audioConnection, DiscordApi api) {
@@ -336,7 +337,7 @@ public class Main {
                         AudioConnection audioConnection = channel.connect().get(10,TimeUnit.SECONDS);
                         System.out.println("start");
                         startPlaza(audioConnection,api);
-                        slashCommandInteraction.createImmediateResponder().setContent("OK.").respond();
+                        slashCommandInteraction.createImmediateResponder().setContent("Loading Nightwave Plaza.").respond();
                     } catch (InterruptedException | ExecutionException | TimeoutException e) {
                         throw new RuntimeException(e);
                     }
