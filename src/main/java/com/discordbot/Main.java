@@ -1,7 +1,9 @@
 package com.discordbot;
 
 import com.sedmelluq.discord.lavaplayer.player.*;
+import com.sedmelluq.discord.lavaplayer.player.event.AudioEvent;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
+import com.sedmelluq.discord.lavaplayer.player.event.AudioEventListener;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.source.http.*;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
@@ -215,6 +217,20 @@ public class Main {
                         }
                     }
             );
+            player.addListener(new AudioEventListener() {
+                @Override
+                public void onEvent(AudioEvent event) {
+                    System.out.println(event.getClass().getName());
+                    if (event.getClass().getName() == "com.sedmelluq.discord.lavaplayer.player.event.TrackStartEvent") {
+                        System.out.println(player.getPlayingTrack().getInfo().title);
+                        String title = player.getPlayingTrack().getInfo().title;
+                        if (title.length() > 32) {
+                            title = "..." + title.substring(Math.max(0, player.getPlayingTrack().getInfo().title.length() - 29));
+                        }
+                        api.getYourself().updateNickname(slashCommandInteraction.getServer().get(), title);
+                    }
+                }
+            });
         } else {
             playerManager.loadItem(link, new AudioLoadResultHandler() {
                         @Override
@@ -260,6 +276,20 @@ public class Main {
                         }
                     }
             );
+            player.addListener(new AudioEventListener() {
+                @Override
+                public void onEvent(AudioEvent event) {
+                    System.out.println(event.getClass().getName());
+                    if (event.getClass().getName() == "com.sedmelluq.discord.lavaplayer.player.event.TrackStartEvent") {
+                        System.out.println(player.getPlayingTrack().getInfo().title);
+                        String title = player.getPlayingTrack().getInfo().title;
+                        if (title.length() > 32) {
+                            title = "..." + title.substring(Math.max(0, player.getPlayingTrack().getInfo().title.length() - 29));
+                        }
+                        api.getYourself().updateNickname(slashCommandInteraction.getServer().get(), title);
+                    }
+                }
+            });
         }
     }
 
@@ -352,6 +382,7 @@ public class Main {
                 //stop
             } else if (Objects.equals(slashCommandInteraction.getCommandName(), "stop")) {
                 if (slashCommandInteraction.getServer().isPresent()) {
+                    api.getYourself().resetNickname(slashCommandInteraction.getServer().get());
                     if (slashCommandInteraction.getServer().get().getConnectedVoiceChannel(api.getYourself()).isPresent()) {
                         slashCommandInteraction
                                 .getServer().get()
@@ -433,3 +464,4 @@ public class Main {
         return new LavaplayerAudioSource(getApi(), audioPlayer);
     }
 }
+
