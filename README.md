@@ -16,5 +16,10 @@ Features:
 ## How to run bot
 1. Download and extract latest release
 2. Register your own Discord bot and get the secret token
-3. Create `token.txt` in the working folder, and paste token here
-4. Run `/bin/abtkc2.0.bat` or `/bin/abtkc2.0`
+3. Get OAuth token
+4. Create `token.txt` in the working folder, and paste token and OAuth token.
+5. Run `/bin/abtkc2.0.bat` or `/bin/abtkc2.0`
+
+## To-Do list:
+- [ ] Clean repo
+- [ ] Switch title back to first 32 symbols instead of last, or let choose
