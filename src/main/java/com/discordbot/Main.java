@@ -25,11 +25,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.javacord.api.audio.*;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
 import org.javacord.api.entity.intent.Intent;
+import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.interaction.*;
 
 
@@ -324,6 +328,10 @@ public class Main {
 //                .addOption(SlashCommandOption.createStringOption("Youtube Link","https://www.youtube.com/watch?v=mXHKjFKBC0g",false)
                 .createGlobal(api)
                 .join();
+        SlashCommand commandPM = SlashCommand.with("message", "message", Arrays.asList(
+                SlashCommandOption.createStringOption("Userid","Long User id",true),
+                SlashCommandOption.createStringOption("Messagecontent","Write message here",true)
+        )).createGlobal(api).join();
     }
 
     public static void createSlashCommandListeners(DiscordApi api, String token2) {
@@ -420,7 +428,61 @@ public class Main {
                                 .setContent("Voicechat not found. Are you in a voicechat?")
                                 .send();
                     }
+                } else if (Objects.equals(slashCommandInteraction.getCommandName(), "message")) {
+                    if (!slashCommandInteraction.getUser().isBotOwner()) {
+                        slashCommandInteraction.createImmediateResponder()
+                                .setContent("You are not my owner.")
+                                .respond();
+                    } else {
+                        try {
+                            Long id = Long.parseLong(slashCommandInteraction.getArgumentStringValueByIndex(0).get());
+                            api.getUserById(id).thenAccept(user -> {
+                               user.openPrivateChannel().thenAccept(privateChannel -> {
+                                   privateChannel.sendMessage(slashCommandInteraction.getArgumentStringValueByIndex(1).get());
+                               });
+                            });
+                            slashCommandInteraction.createImmediateResponder()
+                                    .setContent("Message sent.")
+                                    .respond();
+                        } catch (Exception e) {
+                            slashCommandInteraction.createImmediateResponder()
+                                    .setContent(e.getMessage())
+                                    .respond();
+                            throw e;
+                        }
+                    }
                 }
+        });
+        api.addMessageCreateListener(event -> {
+            Message message = event.getMessage();
+            if (message.getPrivateChannel().isPresent()
+                    && !message.getAuthor().isYourself()
+                    && !message.getAuthor().isBotOwner()
+                    && message.getMessageReference().isEmpty()
+                    && message.getMessageInteraction().isEmpty()){
+                relayMessage(api, message);
+            }
+        });
+    }
+
+    private static void relayMessage(DiscordApi api, Message message) {
+        api.getOwner().get().thenAccept(user -> {
+            user.openPrivateChannel().thenAccept(privateChannel -> {
+                String relayText = message.getAuthor().getDiscriminatedName() + " ("
+                        + message.getAuthor().getId() + "):\n"
+                        + message.getContent();
+                String attachmentsUrls = message.getAttachments().stream()
+                                .map(MessageAttachment::getUrl)
+                                        .map(Object::toString)
+                                                .collect(Collectors.joining("\n"));
+                if (!attachmentsUrls.isEmpty()) {
+                    relayText += "\n" + attachmentsUrls;
+                }
+                privateChannel.sendMessage(relayText);
+            });
+        }).exceptionally(throwable -> {
+            throwable.printStackTrace();
+            return null;
         });
     }
  }
